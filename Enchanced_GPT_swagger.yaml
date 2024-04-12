@@ -1,0 +1,94 @@
+host: 127.0.0.1:5000
+info:
+  description: Enhanced Chat API with create and insert embeddings, perform search, enhance the completions API
+  title: Enhanced Chat API
+  version: '1.0'
+paths:
+  /delete_index:
+    delete:
+      consumes:
+        - application/x-www-form-urlencoded
+      description: Index successfully deleted.
+      parameters:
+        - description: Name of the index to be deleted.
+          in: formData
+          name: index_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successfull deletion
+          schema:
+            properties:
+              message:
+                example: The Index is successfully deleted.
+                type: string
+            type: object
+      summary: Delete the index
+  /embeddings/generate:
+    post:
+      consumes:
+        - application/x-www-form-urlencoded
+      description: Success message after successfull insert.
+      parameters:
+        - description: Path of the file from which data is read.
+          in: formData
+          name: file_path
+          required: true
+          type: string
+        - description: Name of the index to which data is stored.
+          in: formData
+          name: index_name
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Successfull Insert
+          schema:
+            properties:
+              message:
+                example: Successfull Insert
+                type: string
+            type: object
+        '500':
+          description: API Response
+          schema:
+            properties:
+              message:
+                example: Failed to insert
+                type: string
+            type: object
+      summary: Generate embeddings and insert to pinecone database
+  /enhance_prompt:
+    post:
+      consumes:
+        - application/x-www-form-urlencoded
+      description: Response after sucessfull Completions call.
+      parameters:
+        - description: question to be answered.
+          in: formData
+          name: prompt
+          required: true
+          type: string
+      responses:
+        '200':
+          description: API Response
+          schema:
+            properties:
+              message:
+                example: API Response
+                type: string
+            type: object
+        '500':
+          description: API Response
+          schema:
+            properties:
+              message:
+                example: Failed to retrieve
+                type: string
+            type: object
+      summary: Get response after searching pinecone and enhancing the prompt
+schemes:
+  - http
+  - https
+swagger: '2.0'
