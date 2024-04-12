@@ -1,4 +1,4 @@
-host: 127.0.0.1:5000
+host: 192.168.0.107:5000
 info:
   description: Enhanced Chat API with create and insert embeddings, perform search, enhance the completions API
   title: Enhanced Chat API
