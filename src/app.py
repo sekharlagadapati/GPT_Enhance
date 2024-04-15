@@ -11,6 +11,9 @@ from pinecone import ServerlessSpec
 from datasets import load_dataset
 from tqdm.auto import tqdm
 from config import Config
+from flask_swagger_ui import get_swaggerui_blueprint
+from flask_swagger import swagger
+
 
 
 app = Flask(__name__)
@@ -27,19 +30,160 @@ openai.api_key=app.config['OPENAI_API_KEY']
 MODEL = "text-embedding-3-large"
 
 
-""" res = client.embeddings.create(
-    input=[
-        "Sample document text goes here",
-        "there will be several phrases in each batch"
-    ], model=MODEL
+# Define a route to serve the Swagger specification as a JSON response
+@app.route('/api/spec', methods=['GET'])
+def spec():
+    base_url = request.url_root.rstrip('/')
+    swagger_spec = {
+        "swagger": "2.0",
+        "info": {
+            "title": "Enhanced Chat API",
+            "version": "1.0",
+            "description": "Enhanced Chat API with create and insert embeddings, perform search, enhance the completions API"
+        },
+         "host": base_url.split('://')[1],  # Extract host from the base URL
+        #"basePath": "/api",  # Base path of your API
+        "schemes": [
+            "http",
+            "https"
+        ],
+        "paths": {
+            "/embeddings/generate": {
+                "post": {
+                    "summary": "Generate embeddings and insert to pinecone database",
+                    "description": "Success message after successfull insert.",
+                    "consumes": ["application/x-www-form-urlencoded"],
+                    "parameters": [
+                        {
+                            "name": "file_path",
+                            "in": "formData",
+                            "type": "string",
+                            "required": True,
+                            "description": "Path of the file from which data is read."
+                        },
+                         {
+                            "name": "index_name",
+                            "in": "formData",
+                            "type": "string",
+                            "required": True,
+                            "description": "Name of the index to which data is stored."
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Successfull Insert",
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Successfull Insert"
+                                    }
+                                }
+                            }
+                        },
+                        "500": {
+                            "description": "API Response",
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Failed to insert"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/delete_index": {
+                "delete": {
+                    "summary": "Delete the index",
+                    "description": "Index successfully deleted.",
+                    "consumes": ["application/x-www-form-urlencoded"],
+                    "parameters": [
+                        {
+                            "name": "index_name",
+                            "in": "formData",
+                            "type": "string",
+                            "required": True,
+                            "description": "Name of the index to be deleted."
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Successfull deletion",
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "example": "The Index is successfully deleted."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/enhance_prompt": {
+                "post": {
+                    "summary": "Get response after searching pinecone and enhancing the prompt",
+                    "description": "Response after sucessfull Completions call.",
+                    "consumes": ["application/x-www-form-urlencoded"],
+                    "parameters": [
+                        {
+                            "name": "prompt",
+                            "in": "formData",
+                            "type": "string",
+                            "required": True,
+                            "description": "question to be answered."
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "API Response",
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "example": "API Response"
+                                    }
+                                }
+                            }
+                        },
+                        "500": {
+                            "description": "API Response",
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Failed to retrieve"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return jsonify(swagger_spec)
+
+SWAGGER_URL = '/api/docs'  # URL for exposing Swagger UI (without trailing '/')
+API_URL = '/api/spec'  # Our API url (can of course be a local resource)
+
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
+    API_URL,
+    config={  # Swagger UI config overrides
+        'app_name': "Enhanced Chat"
+    },
 )
-#print(res)
 
-# we can extract embeddings to a list
-embeds = [record.embedding for record in res.data]
-len(embeds)
-
-print(len(embeds)) """
 # function to check if index already exists (it shouldn't if this is your first run)
 def index_exits(index_name):
     if index_name not in pc.list_indexes().names():
@@ -63,28 +207,8 @@ def index_exits(index_name):
     
     print(index.describe_index_stats())
     return index
-""" # load the first 1K rows of the TREC dataset
-trec = load_dataset('trec', split='train[:100]')
-print(trec)
-count = 0  # we'll use the count to create unique IDs
-batch_size = 32  # process everything in batches of 32
- for i in tqdm(range(0, len(trec['text']), batch_size)):
-    # set end position of batch
-    i_end = min(i+batch_size, len(trec['text']))
-    # get batch of lines and IDs
-    lines_batch = trec['text'][i: i+batch_size]
-    ids_batch = [str(n) for n in range(i, i_end)]
-    # create embeddings
-    res = client.embeddings.create(input=lines_batch, model=MODEL)
-    embeds = [record.embedding for record in res.data]
-    # prep metadata and upsert batch
-    meta = [{'text': line} for line in lines_batch]
-    to_upsert = zip(ids_batch, embeds, meta)
-    # upsert to Pinecone
-    index.upsert(vectors=list(to_upsert)) """
- 
- # Function to read file contents and generate embeddings
 
+ # Function to read file contents and generate embeddings
 @app.route('/embeddings/generate', methods=['POST'])
 def generate_embeddings():
     try:
@@ -104,6 +228,8 @@ def generate_embeddings():
         print("Error:", e)
         traceback.print_exc()
         return None    
+
+
 #Generate Embeddings by reading from a file
 def generate_embeddings_from_file(file_path,index_name):
     try:
@@ -111,20 +237,14 @@ def generate_embeddings_from_file(file_path,index_name):
         with open(file_path, 'r', encoding='utf-8') as file:
             text = file.read()
         print(file_path)
-        #print(text)
+        
         # Call the OpenAI embeddings API to generate embeddings
         response = client.embeddings.create(input=text, model=MODEL)
 
-        #print(response)
         # Extract and return the embeddings
-        #embeddings = response['embedding']
         embeddings = response.data[0].embedding
-        #print(embeddings)
         meta = {'text': text}
-        #print(meta)
-        #to_upsert = zip(round(random.randint(1, 100)), embeddings, meta)
         # upsert to Pinecone
-        #index.upsert(vectors=list(to_upsert))
         print(indx)
         to_upsert = {
             "id": str(round(random.random(), 2)), 
@@ -178,23 +298,16 @@ def generate_embeddings_from_file_paragraphs(file_path,index_name):
             # get batch of lines and IDs
             #lines_batch = [paragraphs[n] for n in range(i, i_end)]
             ids_batch = [str(n) for n in range(0, i_end+1)]
-            print("ids_batch---->",ids_batch)
+            
+            #print("ids_batch---->",ids_batch)
         
             # create embeddings
             res = client.embeddings.create(input=paragraphs[i], model=MODEL)
             #embeds = [record.embedding for record in res.data]
             embeds = res.data[0].embedding
             #print("embeds--------------------------------->",embeds)
-            """ # prep metadata and upsert batch
-            #meta = {}
-            meta = [{"text": paragraphs[i]}]
-            print("meta--->", meta)
-            to_upsert = zip(ids_batch,embeds, meta )
-            #to_upsert = zip(to_upsert,{'text': paragraphs[i]})
-            print("to_upsert--------->",list(to_upsert))
-            # upsert to Pinecone
-            indx.upsert(vectors=list(to_upsert))  """
-            print(str(ids_batch[i]))
+            
+            #print(str(ids_batch[i]))
             meta = {"text": paragraphs[i]}
             to_upsert = {
             "id": str(ids_batch[i]), 
@@ -362,9 +475,8 @@ prompt = "Unicode: One encoding standard for many alphabets"
 enhanced_completions = enhance_prompt(prompt)
 print(enhanced_completions) """
 
+app.register_blueprint(swaggerui_blueprint)
+
 if __name__ == '__main__':
     app.run(debug=True)
-
-#generate_embeddings_from_file_paragraphs("C:\\Users\\chand\\GPT_Vector\\Test.txt",index_name)
-#generate_embeddings_from_file("C:\\Users\\chand\\GPT_Vector\\Test.txt",index_name)
 

@@ -1,0 +1,178 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Enhanced Chat API",
+    "description": "Enhanced Chat API with create and insert embeddings, perform search, enhance the completions API",
+    "version": "1.0"
+  },
+  "servers": [
+    {
+      "url": "http://192.168.0.107:5000/"
+    },
+    {
+      "url": "https://192.168.0.107:5000/"
+    }
+  ],
+  "paths": {
+    "/delete_index": {
+      "delete": {
+        "summary": "Delete the index",
+        "description": "Index successfully deleted.",
+        "parameters": [
+          {
+            "name": "index_name",
+            "in": "header",
+            "description": "Name of the index to be deleted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfull deletion",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "The Index is successfully deleted."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/embeddings/generate": {
+      "post": {
+        "summary": "Generate embeddings and insert to pinecone database",
+        "description": "Success message after successfull insert.",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "required": [
+                  "file_path",
+                  "index_name"
+                ],
+                "type": "object",
+                "properties": {
+                  "file_path": {
+                    "type": "string",
+                    "description": "Path of the file from which data is read."
+                  },
+                  "index_name": {
+                    "type": "string",
+                    "description": "Name of the index to which data is stored."
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successfull Insert",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfull Insert"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Failed to insert"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/enhance_prompt": {
+      "post": {
+        "summary": "Get response after searching pinecone and enhancing the prompt",
+        "description": "Response after sucessfull Completions call.",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "required": [
+                  "prompt"
+                ],
+                "type": "object",
+                "properties": {
+                  "prompt": {
+                    "type": "string",
+                    "description": "question to be answered."
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "API Response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "API Response"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "API Response",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Failed to retrieve"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {},
+  "x-original-swagger-version": "2.0"
+}
