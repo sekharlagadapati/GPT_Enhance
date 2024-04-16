@@ -20,7 +20,7 @@ app = Flask(__name__)
 app.config.from_object(Config)
 pc = Pinecone(api_key = app.config['PINECONE_API_KEY'])
 index_name = app.config['VECTOR_INDEX_NAME']
-spec = ServerlessSpec(cloud="GCP", region="Iowa (us-central1)")
+spec = ServerlessSpec(cloud="AWS", region="us-east-1")
 
 
 client = OpenAI(
@@ -229,6 +229,33 @@ def generate_embeddings():
         traceback.print_exc()
         return None    
 
+#Generate Embeddings
+def generate_embeddings_from_text(text,index_name):
+    try:
+        indx = index_exits(index_name)
+         
+        # Call the OpenAI embeddings API to generate embeddings
+        response = client.embeddings.create(input=text, model=MODEL)
+
+        # Extract and return the embeddings
+        embeddings = response.data[0].embedding
+        meta = {'text': text}
+        # upsert to Pinecone
+        
+        to_upsert = {
+            "id": str(round(random.random(), 2)), 
+            "values": embeddings, 
+            "metadata": meta
+            }
+        indx.upsert(vectors=[to_upsert])
+        print("Embeddings_Text--->",indx.describe_index_stats())
+        return embeddings
+
+    except Exception as e:
+        print("Error:", e)
+        traceback.print_exc()
+        return None
+
 
 #Generate Embeddings by reading from a file
 def generate_embeddings_from_file(file_path,index_name):
@@ -245,7 +272,7 @@ def generate_embeddings_from_file(file_path,index_name):
         embeddings = response.data[0].embedding
         meta = {'text': text}
         # upsert to Pinecone
-        print(indx)
+        print(indx.describe_index_stats())
         to_upsert = {
             "id": str(round(random.random(), 2)), 
             "values": embeddings, 
@@ -269,20 +296,11 @@ def generate_embeddings_from_file_paragraphs(file_path,index_name):
             
             for line in file:
                 if line.strip():  # Check if the line is not empty
-                    # Split the line into sentences.
-                   
-                    sentences = line.split(".")
-                    for sentence in sentences:
-                        if sentence.strip():
-                            paragraph += sentence
-                            
-                            if paragraph:
-                                paragraphs.append(paragraph.strip())  # Remove leading/trailing whitespace
-                                paragraph = ''  # Reset paragraph for the next iteration
-                    else:
-                        if paragraph:
-                            paragraphs.append(paragraph.strip())  # Remove leading/trailing whitespace
-                            paragraph = ''  # Reset paragraph for the next iteration
+                    paragraph += line  
+                else:
+                    if paragraph:
+                        paragraphs.append(paragraph.strip())  # Remove leading/trailing whitespace
+                        paragraph = ''  # Reset paragraph for the next iteration
             if paragraph:  # Handle the last paragraph if file doesn't end with an empty line
                 paragraphs.append(paragraph.strip())
         print("Paragraph Length ------------------------->" , len(paragraphs))
@@ -316,7 +334,7 @@ def generate_embeddings_from_file_paragraphs(file_path,index_name):
             }
             #print("to_upsert--------->",to_upsert)
             indx.upsert(vectors=[to_upsert])
-            return embeds
+        return embeds
         
     except Exception as e:
         print("Error:", e)
@@ -354,7 +372,7 @@ def search_in_pinecone(query,index):
         #query = "Unicode: One encoding standard for many alphabets"
         xq = client.embeddings.create(input=prompt, model=MODEL).data[0].embedding
         
-        res = indx.query(vector=[xq], top_k=5, include_metadata=True)
+        res = indx.query(vector=[xq], top_k=1, include_metadata=True)
 
         print(indx.describe_index_stats())
         """ for match in res['matches']:
@@ -393,13 +411,20 @@ def get_chat_completion(prompt,contexts):
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + openai.api_key
         }
-        combined_prompt = f'{prompt} {" ".join(contexts)}'
+
+        print("Contexts------------->",contexts)
+        if contexts:
+            combined_prompt = f'{prompt} {" ".join(contexts)}'
+            flag = 'Y'
+        else:
+            combined_prompt = prompt
+            flag = 'N'
         # Request payload
         payload = {
             "model": "gpt-3.5-turbo-instruct",
             "prompt": combined_prompt,
             "temperature": 0.7,
-            "max_tokens": 300
+            "max_tokens": 1000
         }
 
         # Make the request
@@ -407,6 +432,10 @@ def get_chat_completion(prompt,contexts):
 
         # Parse response
         if response.status_code == 200:
+            text = response.json()['choices'][0]['text']
+            print("Completions response---->",text)
+            if flag == 'N':
+                generate_embeddings_from_text(text,index_name)
             return response.json()['choices'][0]['text'].strip()
         else:
             print("Error:", response.text)
@@ -414,6 +443,7 @@ def get_chat_completion(prompt,contexts):
     
     except Exception as e:
         print("Error:", e)
+        traceback.print_exc()
         return None
 
 # Function to generate completions using OpenAI Completions API
