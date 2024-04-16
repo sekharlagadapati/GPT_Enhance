@@ -1,0 +1,177 @@
+{
+  "components": {},
+  "info": {
+    "description": "Enhanced Chat API with create and insert embeddings, perform search, enhance the completions API",
+    "title": "Enhanced Chat API",
+    "version": "1.0"
+  },
+  "openapi": "3.0.1",
+  "paths": {
+    "/delete_index": {
+      "delete": {
+        "description": "Index successfully deleted.",
+        "parameters": [
+          {
+            "description": "Name of the index to be deleted",
+            "in": "header",
+            "name": "index_name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "properties": {
+                    "message": {
+                      "example": "The Index is successfully deleted.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successfull deletion"
+          }
+        },
+        "summary": "Delete the index"
+      }
+    },
+    "/embeddings/generate": {
+      "post": {
+        "description": "Success message after successfull insert.",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "file_path": {
+                    "description": "Path of the file from which data is read.",
+                    "type": "string"
+                  },
+                  "index_name": {
+                    "description": "Name of the index to which data is stored.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file_path",
+                  "index_name"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "properties": {
+                    "message": {
+                      "example": "Successfull Insert",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successfull Insert"
+          },
+          "500": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "properties": {
+                    "message": {
+                      "example": "Failed to insert",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "API Response"
+          }
+        },
+        "summary": "Generate embeddings and insert to pinecone database"
+      }
+    },
+    "/enhance_prompt": {
+      "post": {
+        "description": "Response after sucessfull Completions call.",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "prompt": {
+                    "description": "question to be answered.",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "prompt"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "properties": {
+                    "message": {
+                      "example": "API Response",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "API Response"
+          },
+          "500": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "properties": {
+                    "message": {
+                      "example": "Failed to retrieve",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "API Response"
+          }
+        },
+        "summary": "Get response after searching pinecone and enhancing the prompt"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://127.0.0.1:5000"
+    },
+    {
+      "url": "http://127.0.0.1:5000"
+    }
+  ]
+}

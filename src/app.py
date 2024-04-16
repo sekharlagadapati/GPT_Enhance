@@ -34,142 +34,184 @@ MODEL = "text-embedding-3-large"
 @app.route('/api/spec', methods=['GET'])
 def spec():
     base_url = request.url_root.rstrip('/')
+    https_url = "https://" + base_url.split('://')[1]
+    http_url = "http://" + base_url.split('://')[1]
     swagger_spec = {
-        "swagger": "2.0",
+        "openapi": "3.0.1",
         "info": {
-            "title": "Enhanced Chat API",
-            "version": "1.0",
-            "description": "Enhanced Chat API with create and insert embeddings, perform search, enhance the completions API"
-        },
-         "host": base_url.split('://')[1],  # Extract host from the base URL
-        #"basePath": "/api",  # Base path of your API
-        "schemes": [
-            "http",
-            "https"
-        ],
+                "title": "Enhanced Chat API",
+                "description": "Enhanced Chat API with create and insert embeddings, perform search, enhance the completions API",
+                "version": "1.0"
+                },
+         "servers": [
+                        {
+                        "url": https_url #"http://192.168.0.107:5000/"
+                        },
+                        {
+                        "url": http_url #"https://192.168.0.107:5000/"
+                        }
+                    ],
         "paths": {
-            "/embeddings/generate": {
+                "/delete_index": {
+                        "delete": {
+                        "summary": "Delete the index",
+                        "description": "Index successfully deleted.",
+                        "parameters": [
+                                        {
+                                            "name": "index_name",
+                                            "in": "header",
+                                            "description": "Name of the index to be deleted",
+                                            "required": True,
+                                            "schema": {
+                                            "type": "string"
+                                            }
+                                        }
+                                     ],
+                        "responses": {
+                        "200": {
+                            "description": "Successfull deletion",
+                            "content": {
+                            "*/*": {
+                                "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "message": {
+                                    "type": "string",
+                                    "example": "The Index is successfully deleted."
+                                    }
+                                }
+                                }
+                            }
+                            }
+                        }
+                        }
+                    }
+                },
+                "/embeddings/generate": {
                 "post": {
                     "summary": "Generate embeddings and insert to pinecone database",
                     "description": "Success message after successfull insert.",
-                    "consumes": ["application/x-www-form-urlencoded"],
-                    "parameters": [
-                        {
-                            "name": "file_path",
-                            "in": "formData",
-                            "type": "string",
-                            "required": True,
-                            "description": "Path of the file from which data is read."
-                        },
-                         {
-                            "name": "index_name",
-                            "in": "formData",
-                            "type": "string",
-                            "required": True,
-                            "description": "Name of the index to which data is stored."
+                    "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                        "schema": {
+                            "required": [
+                            "file_path",
+                            "index_name"
+                            ],
+                            "type": "object",
+                            "properties": {
+                            "file_path": {
+                                "type": "string",
+                                "description": "Path of the file from which data is read."
+                            },
+                            "index_name": {
+                                "type": "string",
+                                "description": "Name of the index to which data is stored."
+                            }
+                            }
                         }
-                    ],
+                        }
+                    },
+                    "required": True
+                    },
                     "responses": {
-                        "200": {
-                            "description": "Successfull Insert",
+                    "200": {
+                        "description": "Successfull Insert",
+                        "content": {
+                        "*/*": {
                             "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "message": {
-                                        "type": "string",
-                                        "example": "Successfull Insert"
-                                    }
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                "type": "string",
+                                "example": "Successfull Insert"
                                 }
                             }
-                        },
-                        "500": {
-                            "description": "API Response",
+                            }
+                        }
+                        }
+                    },
+                    "500": {
+                        "description": "API Response",
+                        "content": {
+                        "*/*": {
                             "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "message": {
-                                        "type": "string",
-                                        "example": "Failed to insert"
-                                    }
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                "type": "string",
+                                "example": "Failed to insert"
                                 }
                             }
+                            }
+                        }
                         }
                     }
-                }
-            },
-            "/delete_index": {
-                "delete": {
-                    "summary": "Delete the index",
-                    "description": "Index successfully deleted.",
-                    "consumes": ["application/x-www-form-urlencoded"],
-                    "parameters": [
-                        {
-                            "name": "index_name",
-                            "in": "formData",
-                            "type": "string",
-                            "required": True,
-                            "description": "Name of the index to be deleted."
-                        }
-                    ],
-                    "responses": {
-                        "200": {
-                            "description": "Successfull deletion",
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "message": {
-                                        "type": "string",
-                                        "example": "The Index is successfully deleted."
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
-            },
-            "/enhance_prompt": {
+                },
+                "/enhance_prompt": {
                 "post": {
                     "summary": "Get response after searching pinecone and enhancing the prompt",
                     "description": "Response after sucessfull Completions call.",
-                    "consumes": ["application/x-www-form-urlencoded"],
-                    "parameters": [
-                        {
-                            "name": "prompt",
-                            "in": "formData",
-                            "type": "string",
-                            "required": True,
-                            "description": "question to be answered."
+                    "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                        "schema": {
+                            "required": [
+                            "prompt"
+                            ],
+                            "type": "object",
+                            "properties": {
+                            "prompt": {
+                                "type": "string",
+                                "description": "question to be answered."
+                            }
+                            }
                         }
-                    ],
+                        }
+                    },
+                    "required": True
+                    },
                     "responses": {
-                        "200": {
-                            "description": "API Response",
+                    "200": {
+                        "description": "API Response",
+                        "content": {
+                        "*/*": {
                             "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "message": {
-                                        "type": "string",
-                                        "example": "API Response"
-                                    }
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                "type": "string",
+                                "example": "API Response"
                                 }
                             }
-                        },
-                        "500": {
-                            "description": "API Response",
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "message": {
-                                        "type": "string",
-                                        "example": "Failed to retrieve"
-                                    }
-                                }
                             }
                         }
+                        }
+                    },
+                    "500": {
+                        "description": "API Response",
+                        "content": {
+                        "*/*": {
+                            "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                "type": "string",
+                                "example": "Failed to retrieve"
+                                }
+                            }
+                            }
+                        }
+                        }
+                    }
                     }
                 }
             }
-        }
+        },
+        "components": {}
     }
     return jsonify(swagger_spec)
 
@@ -434,6 +476,7 @@ def get_chat_completion(prompt,contexts):
         if response.status_code == 200:
             text = response.json()['choices'][0]['text']
             print("Completions response---->",text)
+            print("Flag--->",flag)
             if flag == 'N':
                 generate_embeddings_from_text(text,index_name)
             return response.json()['choices'][0]['text'].strip()
